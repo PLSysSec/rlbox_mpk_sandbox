@@ -36,6 +36,16 @@ rlbox_mpk_sandbox_thread_data* get_rlbox_mpk_sandbox_thread_data();
 
 #endif
 
+#define SET_MPK_PERMISSIONS(pkru)                       \
+  {                                                     \
+      unsigned int eax = pkru;                          \
+      unsigned int ecx = 0;                             \
+      unsigned int edx = 0;                             \
+      asm volatile(".byte 0x0f,0x01,0xef\n\t"           \
+                  : : "a" (eax), "c" (ecx), "d" (edx)); \
+  }
+
+
 /**
  * @brief Class that implements the mpk sandbox.
  */
@@ -54,6 +64,9 @@ public:
   // using can_grant_deny_access = void;
 
 private:
+  const uint32_t mpk_app_domain_perms = 0;
+  // 0b1100 --- disallow access to domain 1
+  const uint32_t mpk_sbx_domain_perms = 12;
   RLBOX_SHARED_LOCK(callback_mutex);
   static inline const uint32_t MAX_CALLBACKS = 64;
   void* callback_unique_keys[MAX_CALLBACKS]{ 0 };
@@ -69,6 +82,7 @@ private:
 #ifdef RLBOX_EMBEDDER_PROVIDES_TLS_STATIC_VARIABLES
     auto& thread_data = *get_rlbox_mpk_sandbox_thread_data();
 #endif
+    SET_MPK_PERMISSIONS(thread_data.sandbox->mpk_app_domain_perms);
     thread_data.last_callback_invoked = N;
     using T_Func = T_Ret (*)(T_Args...);
     T_Func func;
@@ -179,6 +193,7 @@ protected:
     auto& thread_data = *get_rlbox_mpk_sandbox_thread_data();
 #endif
     thread_data.sandbox = this;
+    SET_MPK_PERMISSIONS(mpk_sbx_domain_perms);
     return (*func_ptr)(params...);
   }
 

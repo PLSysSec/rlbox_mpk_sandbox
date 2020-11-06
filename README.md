@@ -1,5 +1,8 @@
 # RLBOX MPK Sandbox Integration
+
 Integration with RLBox sandboxing API to leverage the sandboxing provided by Intel MPK (Memory Protection Keys).
+
+**Note:**  This repo is only meant to simulate the performance cost of MPK transitions.
 
 For details about the RLBox sandboxing APIs, see [here](https://github.com/PLSysSec/rlbox_api_cpp17).
 
