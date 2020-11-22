@@ -10,6 +10,8 @@
 // NOLINTNEXTLINE
 #define TestType rlbox::rlbox_mpk_sandbox
 
+RLBOX_MPK_SANDBOX_STATIC_VARIABLES();
+
 // NOLINTNEXTLINE
 #define CreateSandbox(sandbox) sandbox.create_sandbox()
 #include "test_sandbox_glue.inc.cpp"
