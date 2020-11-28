@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <cstdlib>
+#include <dlfcn.h>
 #include <mutex>
 #ifndef RLBOX_USE_CUSTOM_SHARED_LOCK
 #  include <shared_mutex>
@@ -64,6 +65,8 @@ public:
   // using can_grant_deny_access = void;
 
 private:
+  void* sandbox = nullptr;
+
   const uint32_t mpk_app_domain_perms = 0;
   // 0b1100 --- disallow access to domain 1
   const uint32_t mpk_sbx_domain_perms = 12;
@@ -97,9 +100,17 @@ private:
   }
 
 protected:
-  inline void impl_create_sandbox() {}
+  inline void impl_create_sandbox(const char* path) {
+    sandbox = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
+    if (sandbox == nullptr) {
+      char* error = dlerror();
+      detail::dynamic_check(sandbox != nullptr, error);
+    }
+  }
 
-  inline void impl_destroy_sandbox() {}
+  inline void impl_destroy_sandbox() {
+    dlclose(sandbox);
+  }
 
   template<typename T>
   inline void* impl_get_unsandboxed_pointer(T_PointerType p) const
@@ -166,25 +177,13 @@ protected:
     return nullptr;
   }
 
-  // adding a template so that we can use static_assert to fire only if this
-  // function is invoked
   template<typename T = void>
-  void* impl_lookup_symbol(const char* /* func_name */)
+  void* impl_lookup_symbol(const char* func_name)
   {
-    // Will fire if this impl_lookup_symbol is ever called for the static
-    // sandbox
-    constexpr bool fail = std::is_same_v<T, void>;
-    rlbox_detail_static_fail_because(
-      fail,
-      "The no_op_sandbox uses static calls and thus developers should add\n\n"
-      "#define RLBOX_USE_STATIC_CALLS() rlbox_mpk_sandbox_lookup_symbol\n\n"
-      "to their code, to ensure that static calls are handled correctly.");
-
-    return nullptr;
+    auto ret = dlsym(sandbox, func_name);
+    detail::dynamic_check(ret != nullptr, "Symbol not found");
+    return ret;
   }
-
-#define rlbox_mpk_sandbox_lookup_symbol(func_name)                            \
-  reinterpret_cast<void*>(&func_name) /* NOLINT */
 
   template<typename T, typename T_Converted, typename... T_Args>
   auto impl_invoke_with_func_ptr(T_Converted* func_ptr, T_Args&&... params)

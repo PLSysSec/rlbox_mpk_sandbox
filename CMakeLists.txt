@@ -127,6 +127,13 @@ add_library(rlbox_glue_lib_shared SHARED ${rlbox_SOURCE_DIR}/code/tests/rlbox_gl
 target_include_directories(rlbox_glue_lib_shared
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  set(DYLIB_EXT "dylib")
+else()
+  set(DYLIB_EXT "so")
+endif()
+set(GLUE_LIB_SO "${CMAKE_BINARY_DIR}/librlbox_glue_lib_shared.${DYLIB_EXT}")
+
 # Tests ###################
 
 include(CTest)
@@ -141,6 +148,10 @@ target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue)
 target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_definitions(test_rlbox_glue PUBLIC
+                           GLUE_LIB_PATH="${GLUE_LIB_SO}")
+
+add_dependencies(test_rlbox_glue rlbox_glue_lib_shared)
 
 find_package(Threads REQUIRED)
 
@@ -149,7 +160,6 @@ target_link_libraries(test_rlbox_glue
                       ${LINK_LUCET_LIB}
                       ${CMAKE_THREAD_LIBS_INIT}
                       ${CMAKE_DL_LIBS}
-                      rlbox_glue_lib_static
                       )
 
 if(UNIX AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
