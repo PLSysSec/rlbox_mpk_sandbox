@@ -4,23 +4,21 @@
 #define NOSWITCHSTACK_ASM
 #include "trampoline_asm_inc.S"
 #undef  NOSWITCHSTACK_ASM
+#define WINDOWSMODE
+#include "trampoline_asm_inc.S"
+#undef  WINDOWSMODE
 
-.globl get_return_target
-.type get_return_target,@function
-.align 16
-get_return_target:
-_get_return_target:
-        /* Assumes frame-pointer exists */
-        mov 0x8(%rbp), %rax
-        ret
-
+/*
+ * param1: sandbox frame address
+ * param2: return value
+ *
+ */
 .globl set_return_target
 .type set_return_target,@function
 .align 16
 set_return_target:
 _set_return_target:
-        /* Assumes frame-pointer exists */
-        mov %rdi, 0x8(%rbp)
+        mov %rsi, 0x8(%rdi)
         ret
 
 

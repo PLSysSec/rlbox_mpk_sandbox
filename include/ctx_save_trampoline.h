@@ -38,14 +38,23 @@ typedef struct {
     uint64_t rax;
 
     uint64_t rsp;
+
+    uint64_t xmm8;
+    uint64_t xmm9;
+    uint64_t xmm10;
+    uint64_t xmm11;
+    uint64_t xmm12;
+    uint64_t xmm13;
+    uint64_t xmm14;
+    uint64_t xmm15;
 } sandbox_thread_ctx;
 
 uint64_t context_switch_to_sbx_func(void* contexts);
 void context_switch_to_sbx_callback();
 uint64_t context_switch_to_sbx_func_noswitchstack(void* contexts);
 void context_switch_to_sbx_callback_noswitchstack();
-uint64_t get_return_target();
-void set_return_target(uint64_t val);
+uint64_t context_switch_to_sbx_func_windowsmode(void* contexts);
+void set_return_target(uint64_t frame_address, uint64_t val);
 // returns old stack pointer
 uint64_t save_sbx_stack_and_switch_to_app_stack(uint64_t app_stack_top, uint64_t param_and_return_size_plus16);
 

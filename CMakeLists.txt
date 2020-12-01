@@ -143,6 +143,8 @@ set(GLUE_LIB_SO "${CMAKE_BINARY_DIR}/librlbox_glue_lib_shared.${DYLIB_EXT}")
 include(CTest)
 include(Catch)
 
+find_package(Threads REQUIRED)
+
 add_executable(test_rlbox_glue test/test_mpk_sandbox_glue_main.cpp
                                test/test_mpk_sandbox_glue.cpp
                                c_src/trampoline_c.c
@@ -160,8 +162,6 @@ target_compile_definitions(test_rlbox_glue PUBLIC
 
 add_dependencies(test_rlbox_glue rlbox_glue_lib_shared)
 
-find_package(Threads REQUIRED)
-
 target_link_libraries(test_rlbox_glue
                       Catch2::Catch2
                       ${LINK_LUCET_LIB}
@@ -175,8 +175,41 @@ endif()
 
 catch_discover_tests(test_rlbox_glue)
 
+###
+
+add_executable(test_rlbox_glue_windowsmode test/test_mpk_sandbox_glue_main.cpp
+                               test/test_mpk_sandbox_glue_windowsmode.cpp
+                               c_src/trampoline_c.c
+                               c_src/trampoline_asm.S
+                               )
+target_include_directories(test_rlbox_glue_windowsmode PUBLIC include)
+target_include_directories(test_rlbox_glue_windowsmode
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/include)
+target_include_directories(test_rlbox_glue_windowsmode
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue)
+target_include_directories(test_rlbox_glue_windowsmode
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_definitions(test_rlbox_glue_windowsmode PUBLIC
+                           GLUE_LIB_PATH="${GLUE_LIB_SO}")
+
+add_dependencies(test_rlbox_glue_windowsmode rlbox_glue_lib_shared)
+
+target_link_libraries(test_rlbox_glue_windowsmode
+                      Catch2::Catch2
+                      ${LINK_LUCET_LIB}
+                      ${CMAKE_THREAD_LIBS_INIT}
+                      ${CMAKE_DL_LIBS}
+                      )
+
+if(UNIX AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
+  target_link_libraries(test_rlbox_glue_windowsmode rt)
+endif()
+
+catch_discover_tests(test_rlbox_glue_windowsmode)
+
 # Shortcuts ###################
 
 add_custom_target(check COMMAND ${CMAKE_CTEST_COMMAND} -V)
 add_dependencies(check test_rlbox_glue)
+add_dependencies(check test_rlbox_glue_windowsmode)
 
