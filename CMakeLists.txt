@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
+set(CMAKE_C_COMPILER /usr/bin/clang-11)
+set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
 
 project(rlbox_mpk
         VERSION 0.1
@@ -91,42 +93,28 @@ endif()
 add_subdirectory("${catch2_SOURCE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/contrib")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  FetchContent_Declare(
-    wasiclang
-    URL
-      https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-11/wasi-sdk-11.0-macos.tar.gz
-    )
-else()
-  FetchContent_Declare(
-    wasiclang
-    URL
-      https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-11/wasi-sdk-11.0-linux.tar.gz
-    )
-endif()
-FetchContent_GetProperties(wasiclang)
-if(NOT wasiclang_POPULATED)
-  FetchContent_Populate(wasiclang)
-endif()
-
-FetchContent_Declare(
-  mod_lucet
-  GIT_REPOSITORY https://github.com/PLSysSec/lucet_sandbox_compiler)
-FetchContent_GetProperties(mod_lucet)
-if(NOT mod_lucet_POPULATED)
-  FetchContent_Populate(mod_lucet)
-endif()
-
-
 # Lib ###################
+
+set(ZERO_COST_FLAGS
+  -fno-asm -fno-asm-blocks # avoid easy bypasses
+  -fsanitize=safe-stack -fstack-clash-protection # Safe stack
+  -flto -fuse-ld=lld # Clang flags needed for cfi and maybe other passes
+  -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fsanitize-cfi-cross-dso # forward edge protection
+  /usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/libclang_rt.cfi-x86_64.a # clang cfi runtime library
+  -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang # stack variable initialization
+)
 
 add_library(rlbox_glue_lib_static STATIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib/libtest.c)
 target_include_directories(rlbox_glue_lib_static
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_options(rlbox_glue_lib_static PRIVATE ${ZERO_COST_FLAGS})
+target_link_options(rlbox_glue_lib_static PRIVATE ${ZERO_COST_FLAGS})
 
 add_library(rlbox_glue_lib_shared SHARED ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib/libtest.c)
 target_include_directories(rlbox_glue_lib_shared
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_options(rlbox_glue_lib_shared PRIVATE ${ZERO_COST_FLAGS})
+target_link_options(rlbox_glue_lib_shared PRIVATE ${ZERO_COST_FLAGS})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(DYLIB_EXT "dylib")
@@ -151,6 +139,12 @@ target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
 target_compile_definitions(test_rlbox_glue PUBLIC
                            GLUE_LIB_PATH="${GLUE_LIB_SO}")
+target_link_options(test_rlbox_glue PUBLIC
+  -rdynamic
+  -Wl,--whole-archive
+  /usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/libclang_rt.safestack-x86_64.a
+  -Wl,--no-whole-archive
+)
 
 add_dependencies(test_rlbox_glue rlbox_glue_lib_shared)
 
