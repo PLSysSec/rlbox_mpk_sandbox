@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.13)
-set(CMAKE_C_COMPILER /usr/bin/clang-11)
-set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
+# set(CMAKE_C_COMPILER /usr/bin/clang-11)
+# set(CMAKE_CXX_COMPILER /usr/bin/clang++-11)
+set(COMPILER_LIB_PATH ../ffbuilds/zerocost_llvm_install/lib/clang/12.0.0)
+set(CMAKE_C_COMPILER ../ffbuilds/zerocost_llvm/bin/clang)
+set(CMAKE_CXX_COMPILER ../ffbuilds/zerocost_llvm/bin/clang++)
 
 project(rlbox_mpk
         VERSION 0.1
@@ -100,7 +103,7 @@ set(ZERO_COST_FLAGS
   -fsanitize=safe-stack -fstack-clash-protection # Safe stack
   -flto -fuse-ld=lld # Clang flags needed for cfi and maybe other passes
   -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fsanitize-cfi-cross-dso # forward edge protection
-  /usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/libclang_rt.cfi-x86_64.a # clang cfi runtime library
+  ${COMPILER_LIB_PATH}/lib/linux/libclang_rt.cfi-x86_64.a # clang cfi runtime library
   -ftrivial-auto-var-init=zero -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang # stack variable initialization
 )
 
@@ -142,7 +145,7 @@ target_compile_definitions(test_rlbox_glue PUBLIC
 target_link_options(test_rlbox_glue PUBLIC
   -rdynamic
   -Wl,--whole-archive
-  /usr/lib/llvm-11/lib/clang/11.0.0/lib/linux/libclang_rt.safestack-x86_64.a
+  ${COMPILER_LIB_PATH}/lib/linux/libclang_rt.safestack-x86_64.a
   -Wl,--no-whole-archive
 )
 
