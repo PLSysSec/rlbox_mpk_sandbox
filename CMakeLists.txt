@@ -161,7 +161,7 @@ target_include_directories(test_rlbox_glue
 target_compile_definitions(test_rlbox_glue PUBLIC
                            GLUE_LIB_PATH="${GLUE_LIB_SO}")
 
-add_dependencies(test_rlbox_glue rlbox_glue_lib_shared)
+add_dependencies(test_rlbox_glue rlbox_glue_lib_shared rlbox_glue_lib_static)
 
 target_link_libraries(test_rlbox_glue
                       Catch2::Catch2
@@ -193,7 +193,7 @@ target_include_directories(test_rlbox_glue_windowsmode
 target_compile_definitions(test_rlbox_glue_windowsmode PUBLIC
                            GLUE_LIB_PATH="${GLUE_LIB_SO}")
 
-add_dependencies(test_rlbox_glue_windowsmode rlbox_glue_lib_shared)
+add_dependencies(test_rlbox_glue_windowsmode rlbox_glue_lib_shared rlbox_glue_lib_static)
 
 target_link_libraries(test_rlbox_glue_windowsmode
                       Catch2::Catch2
