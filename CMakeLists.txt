@@ -132,12 +132,25 @@ add_library(rlbox_glue_lib_shared SHARED ${rlbox_SOURCE_DIR}/code/tests/rlbox_gl
 target_include_directories(rlbox_glue_lib_shared
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
 
+add_library(rlbox_glue_lib_static_32 STATIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib/libtest.c)
+target_include_directories(rlbox_glue_lib_static
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_options(rlbox_glue_lib_static_32 PUBLIC "-m32")
+target_link_options(rlbox_glue_lib_static_32 PUBLIC "-m32")
+
+add_library(rlbox_glue_lib_shared_32 SHARED ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib/libtest.c)
+target_include_directories(rlbox_glue_lib_shared
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_options(rlbox_glue_lib_shared_32 PUBLIC "-m32")
+target_link_options(rlbox_glue_lib_shared_32 PUBLIC "-m32")
+
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(DYLIB_EXT "dylib")
 else()
   set(DYLIB_EXT "so")
 endif()
 set(GLUE_LIB_SO "${CMAKE_BINARY_DIR}/librlbox_glue_lib_shared.${DYLIB_EXT}")
+set(GLUE_LIB_SO_32 "${CMAKE_BINARY_DIR}/librlbox_glue_lib_shared_32.${DYLIB_EXT}")
 
 # Tests ###################
 
@@ -207,6 +220,41 @@ if(UNIX AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
 endif()
 
 catch_discover_tests(test_rlbox_glue_windowsmode)
+
+###
+
+add_executable(test_rlbox_glue_32 test/test_mpk_sandbox_glue_main.cpp
+                               test/test_mpk_sandbox_glue_32.cpp
+                               c_src/trampoline_c.c
+                               c_src/trampoline_asm_32.S
+                               )
+target_compile_options(test_rlbox_glue_32 PUBLIC "-m32")
+target_link_options(test_rlbox_glue_32 PUBLIC "-m32")
+
+target_include_directories(test_rlbox_glue_32 PUBLIC include)
+target_include_directories(test_rlbox_glue_32
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/include)
+target_include_directories(test_rlbox_glue_32
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue)
+target_include_directories(test_rlbox_glue_32
+                           PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_compile_definitions(test_rlbox_glue_32 PUBLIC
+                           GLUE_LIB_PATH="${GLUE_LIB_SO_32}")
+
+add_dependencies(test_rlbox_glue_32 rlbox_glue_lib_shared_32 rlbox_glue_lib_static_32)
+
+target_link_libraries(test_rlbox_glue_32
+                      Catch2::Catch2
+                      ${LINK_LUCET_LIB}
+                      ${CMAKE_THREAD_LIBS_INIT}
+                      ${CMAKE_DL_LIBS}
+                      )
+
+if(UNIX AND NOT (${CMAKE_SYSTEM_NAME} MATCHES "Darwin"))
+  target_link_libraries(test_rlbox_glue_32 rt)
+endif()
+
+catch_discover_tests(test_rlbox_glue_32)
 
 # Shortcuts ###################
 

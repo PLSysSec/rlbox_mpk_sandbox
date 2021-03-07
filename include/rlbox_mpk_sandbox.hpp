@@ -259,6 +259,10 @@ private:
 
   template<size_t T_IntegerNum, size_t T_FloatNum, typename T_Ret, typename T_FormalArg, typename... T_FormalArgs>
   static inline size_t get_stack_param_size(T_Ret(*)(T_FormalArg, T_FormalArgs...)) {
+#if UINTPTR_MAX == 0xffffffff
+    auto ret = sizeof(T_FormalArg) + get_stack_param_size<T_IntegerNum, T_FloatNum>(reinterpret_cast<T_Ret(*)(T_FormalArgs...)>(0));
+    return ret;
+#elif UINTPTR_MAX == 0xffffffffffffffff
     size_t curr_val = 0;
 
     if constexpr (std::is_integral_v<T_FormalArg> || std::is_pointer_v<T_FormalArg> || std::is_reference_v<T_FormalArg> || std::is_enum_v<T_FormalArg>) {
@@ -279,7 +283,10 @@ private:
     } else {
       static_assert(mpk_detail::false_v<T_Ret>, "Unknown case");
     }
-  }
+#else
+    #error "Unknown arch"
+#endif
+}
 
   // push's parameters into the target context registers
   // first param is an in out parameter: current position of the stack pointer
@@ -290,6 +297,14 @@ private:
   static inline void push_parameters(char* stack_pointer, T_Ret(*)(T_FormalArg, T_FormalArgs...), T_ActualArg&& arg, T_ActualArgs&&... args) {
     T_FormalArg arg_conv = arg;
     auto& sandbox_current_thread_sbx_ctx = *get_sandbox_current_thread_sbx_ctx();
+
+#if UINTPTR_MAX == 0xffffffff
+
+    memcpy(stack_pointer, &arg_conv, sizeof(arg_conv));
+    stack_pointer += sizeof(arg_conv);
+    push_parameters<T_IntegerNum, T_FloatNum>(stack_pointer, reinterpret_cast<T_Ret(*)(T_FormalArgs...)>(0), std::forward<T_ActualArgs>(args)...);
+
+#elif UINTPTR_MAX == 0xffffffffffffffff
     uint64_t u64val = serialize_to_uint64(arg_conv);
 
     if constexpr (std::is_integral_v<T_FormalArg> || std::is_pointer_v<T_FormalArg> || std::is_reference_v<T_FormalArg> || std::is_enum_v<T_FormalArg>) {
@@ -351,14 +366,25 @@ private:
     } else {
       static_assert(mpk_detail::false_v<T_Ret>, "Unknown case");
     }
+#else
+    #error "Unknown arch"
+#endif
   }
 
   template<typename T_Ret>
   static inline void push_return(T_Ret ret) {
+    //TODO:
     auto& sandbox_current_thread_sbx_ctx = *get_sandbox_current_thread_sbx_ctx();
     if constexpr (std::is_integral_v<T_Ret> || std::is_pointer_v<T_Ret>) {
       uint64_t val = serialize_to_uint64(ret);
-      sandbox_current_thread_sbx_ctx->rax = val;
+      #if UINTPTR_MAX == 0xffffffff
+        sandbox_current_thread_sbx_ctx->rax = (uint32_t) val;
+        sandbox_current_thread_sbx_ctx->rdx = (uint32_t) (val >> 32);
+      #elif UINTPTR_MAX == 0xffffffffffffffff
+        sandbox_current_thread_sbx_ctx->rax = val;
+      #else
+        #error "Unknown arch"
+      #endif
     } else if constexpr (std::is_same_v<T_Ret, float> || std::is_same_v<T_Ret, double>) {
       uint64_t val = serialize_to_uint64(ret);
       sandbox_current_thread_sbx_ctx->xmm0 = val;

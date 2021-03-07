@@ -73,7 +73,7 @@ _context_switch_to_sbx_func_noswitchstack:
         /* Stage 2: Load sandbox register state */
         movq    0x18(%rdi), %r11
 
-        /* Clear scratch gpr registers to prevents leaks */
+        /* Clear non parameter gpr registers to prevents leaks */
         xor    %rax, %rax
         xor    %rbx, %rbx
         xor    %r12, %r12
@@ -171,7 +171,7 @@ context_switch_to_sbx_func_done_noswitchstack:
 #endif
 
 #ifndef NOSWITCHSTACK_ASM
-        /* load the rsp of the app -- offset by 8 as the return address has already been consumed */
+        /* load the rsp of the app -- offset by pointer as the return address has already been consumed */
         movq    0xc8(%r11), %rsp
         addq    $0x8, %rsp
 #endif
