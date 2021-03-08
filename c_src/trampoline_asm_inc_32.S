@@ -120,7 +120,7 @@ _context_switch_to_sbx_callback:
         // /* Load return registers */
         movl    0xc0(%ecx), %eax
         movl    0x40(%ecx), %edx
-        fld 0x78(%ecx)
+        fldl 0x78(%ecx)
 
         /* Restore the stack of the sandbox */
         movl    0xc8(%ecx), %esp
