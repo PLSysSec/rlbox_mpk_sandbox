@@ -138,5 +138,7 @@ int main(void)
     errExit("my_pkey_free");
   }
 
+  printf("Success!\n");
+
   return 0;
 }
