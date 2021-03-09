@@ -112,6 +112,15 @@ int main(void)
 
   printf("about to read buffer again...\n");
 
+  struct sigaction sa;
+
+  sa.sa_flags = SA_SIGINFO;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_sigaction = sigsegv_handler;
+  if (sigaction(SIGSEGV, &sa, NULL) == -1) {
+    errExit("sigaction");
+  }
+
   setjmp_val = setjmp (env);
   if (!setjmp_val) {
     /*
