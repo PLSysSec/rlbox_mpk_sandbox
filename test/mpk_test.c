@@ -4,6 +4,9 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <errno.h>
+#include <setjmp.h>
 
 static inline void my_wrpkru(unsigned int pkru)
 {
@@ -41,15 +44,25 @@ int my_pkey_free(unsigned long pkey)
 
 #define errExit(msg)                                                           \
   do {                                                                         \
-    perror(msg);                                                               \
+    perror("Error " msg);                                                               \
     exit(1);                                                                   \
   } while (0)
+
+jmp_buf env;
+int crash_occurred = 0;
+
+static void sigsegv_handler(int sig, siginfo_t *si, void *unused)
+{
+    crash_occurred=1;
+    longjmp(env, 1);
+}
 
 int main(void)
 {
   int status;
   int pkey;
   int* buffer;
+  int setjmp_val;
 
   /*
    *Allocate one page of memory
@@ -99,10 +112,17 @@ int main(void)
 
   printf("about to read buffer again...\n");
 
-  /*
-   * This will crash, because we have disallowed access
-   */
-  printf("buffer contains: %d\n", *buffer);
+  setjmp_val = setjmp (env);
+  if (!setjmp_val) {
+    /*
+    * This will crash, because we have disallowed access
+    */
+    printf("buffer contains: %d\n", *buffer);
+  } else {
+    if (!crash_occurred) {
+        errExit("crash did not occur as expected");
+    }
+  }
 
   status = my_pkey_free(pkey);
   if (status == -1) {
