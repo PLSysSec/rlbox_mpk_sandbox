@@ -8,7 +8,8 @@
 #include "trampoline_asm_inc.S"
 #undef  WINDOWSMODE
 
-/*
+/* Modify the return target of this function
+ *
  * param1: sandbox frame address
  * param2: return value
  *
@@ -22,17 +23,20 @@ _set_return_target:
         ret
 
 
-/*
- * param1: sandbox stack (rsp2 = rdi)
+/* Function called in the callback trampoline.
+ * This function switches to the application stack part way though
+ * the execution of a C function (copying its local variables etc).
+ *
+ * param1: application stack (rsp2 = rdi)
  * param2: param_spill_size + return slot size (r_psize = rsi)
 
-rb_old (rcx) = rbp
+rs_old (rcx) = rsp
 r_t (rdx) = rbp - rsp + r_psize
 r_rsp2mint (rdi) = rsp2 - r_t
 memcpy(r_rsp2mint, rsp, r_t)
 rsp = r_rsp2mint (unspill to rdx)
 rbp = rsp2 (rdi) - r_psize (rsi)
-return rb_old (rcx)
+return rs_old (rcx)
  */
  .globl save_sbx_stack_and_switch_to_app_stack
 .type save_sbx_stack_and_switch_to_app_stack,@function

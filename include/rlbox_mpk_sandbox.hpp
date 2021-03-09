@@ -125,16 +125,16 @@ extern "C" {
     rlbox_mpk_sandbox_thread_data* get_rlbox_mpk_sandbox_thread_data();
 }
 
-// #define SET_MPK_PERMISSIONS(pkru) {}
+#define SET_MPK_PERMISSIONS(pkru) {}
 
-#define SET_MPK_PERMISSIONS(pkru)                       \
-  {                                                     \
-      unsigned int eax = pkru;                          \
-      unsigned int ecx = 0;                             \
-      unsigned int edx = 0;                             \
-      asm volatile(".byte 0x0f,0x01,0xef\n\t"           \
-                  : : "a" (eax), "c" (ecx), "d" (edx)); \
-  }
+// #define SET_MPK_PERMISSIONS(pkru)                       \
+//   {                                                     \
+//       unsigned int eax = pkru;                          \
+//       unsigned int ecx = 0;                             \
+//       unsigned int edx = 0;                             \
+//       asm volatile(".byte 0x0f,0x01,0xef\n\t"           \
+//                   : : "a" (eax), "c" (ecx), "d" (edx)); \
+//   }
 
 
 /**
@@ -171,13 +171,20 @@ private:
   void* callback_unique_keys[MAX_CALLBACKS]{ 0 };
   void* callbacks[MAX_CALLBACKS]{ 0 };
 
+  static int32_t roundUpToMultiple16(int32_t numToRound)
+  {
+    const int32_t multiple = 16;
+    return (numToRound + multiple - 1) & -multiple;
+  }
+
   template<uint32_t N, typename T_Ret, typename... T_Args>
   static T_Ret callback_trampoline(T_Args... params)
   {
     #ifndef RLBOX_ZEROCOST_NOSWITCHSTACK
       auto& sandbox_current_thread_app_ctx = *get_sandbox_current_thread_app_ctx();
       const auto stack_param_size = get_stack_param_size<0, 0>(callback_trampoline<N, T_Ret, T_Args...>);
-      const auto stack_param_ret_size = stack_param_size + sizeof(uintptr_t) + 16;
+      const auto stack_params_rounded = roundUpToMultiple16(stack_param_size);
+      const auto stack_param_ret_size = stack_params_rounded + sizeof(uintptr_t) + 16;
       const auto curr_sbx_stack = save_sbx_stack_and_switch_to_app_stack(sandbox_current_thread_app_ctx->rsp, stack_param_ret_size);
     #endif
 
@@ -564,14 +571,13 @@ protected:
       char* prev_sandbox_stack_pointer = curr_sandbox_stack_pointer;
       // keep stack 16 byte aligned
       const auto stack_param_size = get_stack_param_size<0, 0>(func_ptr_conv);
-      curr_sandbox_stack_pointer -= stack_param_size;
-      const auto stack_correction = (16 - (reinterpret_cast<uintptr_t>(curr_sandbox_stack_pointer) % 16)) % 16;
-      curr_sandbox_stack_pointer -= stack_correction;
+      const auto stack_params_rounded = roundUpToMultiple16(stack_param_size);
+      curr_sandbox_stack_pointer -= stack_params_rounded;
     #else
       char* curr_sandbox_stack_pointer = nullptr; // dummy
     #endif
 
-    push_parameters<0, 0>(curr_sandbox_stack_pointer /* in-out param */, reinterpret_cast<T_Converted*>(func_ptr_conv), params...);
+    push_parameters<0, 0>(curr_sandbox_stack_pointer, reinterpret_cast<T_Converted*>(func_ptr_conv), params...);
 
     #ifndef RLBOX_ZEROCOST_NOSWITCHSTACK
       // make room for return address, which is filled in by the trampoline

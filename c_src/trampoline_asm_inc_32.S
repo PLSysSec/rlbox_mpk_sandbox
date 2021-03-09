@@ -58,7 +58,8 @@ _context_switch_to_sbx_func:
         /* load the rsp of the sandbox and set the return address to the trampoline done label */
         movl    0xc8(%ecx), %esp
 
-        leal    context_switch_to_sbx_func_done, %eax
+        call __x86.get_pc_thunk.ax /* PIC support */
+        leal    context_switch_to_sbx_func_done-.(%eax), %eax
 
         movl    %eax, 0x0(%esp)
 
@@ -98,6 +99,9 @@ context_switch_to_sbx_func_done:
         ud2
 
 
+/* This function is the target of the return instruction once a callback trampoline has executed.
+ * We switch back to the sandbox stack, clear scratch registers etc.
+ */
 .globl context_switch_to_sbx_callback
 .type context_switch_to_sbx_callback,@function
 .align 16
@@ -117,7 +121,7 @@ _context_switch_to_sbx_callback:
         fldcw   0x68(%ecx)
         ldmxcsr 0x70(%ecx)
 
-        // /* Load return registers */
+        /* Load return registers */
         movl    0xc0(%ecx), %eax
         movl    0x40(%ecx), %edx
         fldl 0x78(%ecx)

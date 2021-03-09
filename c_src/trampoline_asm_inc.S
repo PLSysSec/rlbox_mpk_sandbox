@@ -184,6 +184,9 @@ context_switch_to_sbx_func_done_noswitchstack:
 #ifndef WINDOWSMODE
 /* this code is unchanged for windows mode */
 
+/* This function is the target of the return instruction once a callback trampoline has executed.
+ * We switch back to the sandbox stack, clear scratch registers etc.
+ */
 #ifndef NOSWITCHSTACK_ASM
 
 .globl context_switch_to_sbx_callback
