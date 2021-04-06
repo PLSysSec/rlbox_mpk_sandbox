@@ -10,6 +10,10 @@ project(rlbox_mpk
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+SET(ASM_OPTIONS "-x assembler-with-cpp")
+enable_language(C CXX ASM)
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fno-stack-protector")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-stack-protector")
 
 option(DEV "Use settings suitable for dev contributions to rlbox" OFF)
 
@@ -91,32 +95,7 @@ endif()
 add_subdirectory("${catch2_SOURCE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${catch2_SOURCE_DIR}/contrib")
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  FetchContent_Declare(
-    wasiclang
-    URL
-      https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-11/wasi-sdk-11.0-macos.tar.gz
-    )
-else()
-  FetchContent_Declare(
-    wasiclang
-    URL
-      https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-11/wasi-sdk-11.0-linux.tar.gz
-    )
-endif()
-FetchContent_GetProperties(wasiclang)
-if(NOT wasiclang_POPULATED)
-  FetchContent_Populate(wasiclang)
-endif()
-
-FetchContent_Declare(
-  mod_lucet
-  GIT_REPOSITORY https://github.com/PLSysSec/lucet_sandbox_compiler)
-FetchContent_GetProperties(mod_lucet)
-if(NOT mod_lucet_POPULATED)
-  FetchContent_Populate(mod_lucet)
-endif()
-
+set (zerocost_heavy_trampoline_SOURCE_DIR "${CMAKE_SOURCE_DIR}/../zerocost_heavy_trampoline")
 
 # Lib ###################
 
@@ -141,7 +120,10 @@ include(CTest)
 include(Catch)
 
 add_executable(test_rlbox_glue test/test_mpk_sandbox_glue_main.cpp
-                               test/test_mpk_sandbox_glue.cpp)
+                               test/test_mpk_sandbox_glue.cpp
+                               ${zerocost_heavy_trampoline_SOURCE_DIR}/c_src/trampoline_src.cpp
+                               ${zerocost_heavy_trampoline_SOURCE_DIR}/c_src/trampoline_asm_64.S
+                               )
 target_include_directories(test_rlbox_glue PUBLIC include)
 target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/include)
@@ -149,6 +131,8 @@ target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue)
 target_include_directories(test_rlbox_glue
                            PUBLIC ${rlbox_SOURCE_DIR}/code/tests/rlbox_glue/lib)
+target_include_directories(test_rlbox_glue
+                           PUBLIC ${zerocost_heavy_trampoline_SOURCE_DIR}/include)
 target_compile_definitions(test_rlbox_glue PUBLIC
                            GLUE_LIB_PATH="${GLUE_LIB_SO}")
 
@@ -158,7 +142,6 @@ find_package(Threads REQUIRED)
 
 target_link_libraries(test_rlbox_glue
                       Catch2::Catch2
-                      ${LINK_LUCET_LIB}
                       ${CMAKE_THREAD_LIBS_INIT}
                       ${CMAKE_DL_LIBS}
                       )

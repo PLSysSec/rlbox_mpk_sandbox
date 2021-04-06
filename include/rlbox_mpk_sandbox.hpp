@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ctx_save_trampoline.hpp"
+
 #include <cstdint>
 #include <cstdlib>
 #include <dlfcn.h>
@@ -46,6 +48,8 @@ rlbox_mpk_sandbox_thread_data* get_rlbox_mpk_sandbox_thread_data();
                   : : "a" (eax), "c" (ecx), "d" (edx)); \
   }
 
+// #define SET_MPK_PERMISSIONS(pkru) {}
+
 
 /**
  * @brief Class that implements the mpk sandbox.
@@ -66,6 +70,9 @@ public:
 
 private:
   void* sandbox = nullptr;
+
+  heavy_trampoline trampoline;
+
   const uint32_t mpk_app_domain_perms = 0;
   // 0b1100 --- disallow access to domain 1
   const uint32_t mpk_sbx_domain_perms = 12;
@@ -95,7 +102,8 @@ private:
     // Callbacks are invoked through function pointers, cannot use std::forward
     // as we don't have caller context for T_Args, which means they are all
     // effectively passed by value
-    return func(params...);
+    // return func(params...);
+    return thread_data.sandbox->trampoline.func_call(func, params...);
   }
 
 protected:
@@ -105,9 +113,24 @@ protected:
       char* error = dlerror();
       detail::dynamic_check(sandbox != nullptr, error);
     }
+
+    #ifdef RLBOX_ZEROCOST_NOSWITCHSTACK
+      const bool should_switch_stacks = false;
+    #else
+      const bool should_switch_stacks = true;
+    #endif
+
+    #ifdef RLBOX_ZEROCOST_WINDOWSMODE
+      const bool should_use_windows_mode = true;
+    #else
+      const bool should_use_windows_mode = false;
+    #endif
+
+    trampoline.init(should_switch_stacks, should_use_windows_mode);
   }
 
   inline void impl_destroy_sandbox() {
+    trampoline.destroy();
     dlclose(sandbox);
   }
 
@@ -192,7 +215,8 @@ protected:
 #endif
     thread_data.sandbox = this;
     SET_MPK_PERMISSIONS(mpk_sbx_domain_perms);
-    return (*func_ptr)(params...);
+    // return (*func_ptr)(params...);
+    return trampoline.func_call(func_ptr, params...);
   }
 
   template<typename T_Ret, typename... T_Args>
