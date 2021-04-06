@@ -5,7 +5,12 @@
 #include "rlbox_mpk_sandbox.hpp"
 
 // NOLINTNEXTLINE
-#define TestName "rlbox_mpk_sandbox"
+#if defined(__x86_64__)
+    #define TestName "rlbox_mpk_sandbox"
+#else
+    #define TestName "rlbox_mpk_sandbox 32"
+#endif
+
 // NOLINTNEXTLINE
 #define TestType rlbox::rlbox_mpk_sandbox
 
