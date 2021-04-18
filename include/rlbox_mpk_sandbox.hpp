@@ -39,16 +39,16 @@ rlbox_mpk_sandbox_thread_data* get_rlbox_mpk_sandbox_thread_data();
 
 #endif
 
-#define SET_MPK_PERMISSIONS(pkru)                       \
-  {                                                     \
-      unsigned int eax = pkru;                          \
-      unsigned int ecx = 0;                             \
-      unsigned int edx = 0;                             \
-      asm volatile(".byte 0x0f,0x01,0xef\n\t"           \
-                  : : "a" (eax), "c" (ecx), "d" (edx)); \
-  }
+// #define SET_MPK_PERMISSIONS(pkru)                       \
+//   {                                                     \
+//       unsigned int eax = pkru;                          \
+//       unsigned int ecx = 0;                             \
+//       unsigned int edx = 0;                             \
+//       asm volatile(".byte 0x0f,0x01,0xef\n\t"           \
+//                   : : "a" (eax), "c" (ecx), "d" (edx)); \
+//   }
 
-// #define SET_MPK_PERMISSIONS(pkru) {}
+#define SET_MPK_PERMISSIONS(pkru) {}
 
 
 /**
